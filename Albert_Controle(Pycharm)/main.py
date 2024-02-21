@@ -48,26 +48,26 @@ class XboxController(object):
 
     def read(self): # return the buttons/triggers that you care about in this methode
         thisdict = dict(
-            LeftJoystickX   = self.LeftJoystickX,
-            LeftJoystickY   = self.LeftJoystickY,
-            RightJoystickX  = self.RightJoystickX,
-            RightJoystickY  = self.RightJoystickY,
-            LeftTrigger     = self.LeftTrigger,
-            RightTrigger    = self.RightTrigger,
-            LeftBumper      = self.LeftBumper,
-            RightBumper     = self.RightBumper,
+            #LeftJoystickX   = self.LeftJoystickX,
+            #LeftJoystickY   = self.LeftJoystickY,
+            #RightJoystickX  = self.RightJoystickX,
+            #RightJoystickY  = self.RightJoystickY,
+            #LeftTrigger     = self.LeftTrigger,
+            #RightTrigger    = self.RightTrigger,
+            #LeftBumper      = self.LeftBumper,
+            #RightBumper     = self.RightBumper,
             AButton         = self.A,
             BButton         = self.B,
             XButton         = self.X,
             YButton         = self.Y,
-            LeftThumb       = self.LeftThumb,
-            RightThumb      = self.RightThumb,
-            LeftDpad        = self.LeftDPad,
-            RightDpad       = self.RightDPad,
-            UpDpad          = self.UpDPad,
-            DownDpad        = self.DownDPad,
-            BackButton      = self.Back,
-            StartButton     = self.Start,
+            #LeftThumb       = self.LeftThumb,
+            #RightThumb      = self.RightThumb,
+            #LeftDpad        = self.LeftDPad,
+            #RightDpad       = self.RightDPad,
+            #UpDpad          = self.UpDPad,
+            #DownDpad        = self.DownDPad,
+            #BackButton      = self.Back,
+            #StartButton     = self.Start,
         )
         return thisdict
 
@@ -135,24 +135,29 @@ if __name__ == '__main__':
                         stopbits=serial.STOPBITS_ONE
                         )
     joy = XboxController()
+
+    ###exit(0)
+
     while True:
 
         #Converting dictionary to json strings
         json1 = json.dumps(joy.read())
 
         if ser.isOpen():
+            data_js = json1.encode('ascii');
+            print(data_js);
             ser.write(json1.encode('ascii'))
             ser.flush()
             try:
                 incoming = ser.readline().decode("utf-8")
-                print(incoming)
+                print("got:", incoming)
             except Exception as e:
                 print(e)
                 pass
-            ser.close()
         else:
             print("opening error")
 
+        #ser.close()
 
 
         """
