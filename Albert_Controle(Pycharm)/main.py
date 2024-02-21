@@ -53,7 +53,7 @@ class XboxController(object):
             #RightJoystickX  = self.RightJoystickX,
             #RightJoystickY  = self.RightJoystickY,
             #LeftTrigger     = self.LeftTrigger,
-            #RightTrigger    = self.RightTrigger,
+            RightTrigger    = self.RightTrigger,
             #LeftBumper      = self.LeftBumper,
             #RightBumper     = self.RightBumper,
             AButton         = self.A,
@@ -151,6 +151,7 @@ if __name__ == '__main__':
             try:
                 incoming = ser.readline().decode("utf-8")
                 print("got:", incoming)
+
             except Exception as e:
                 print(e)
                 pass
