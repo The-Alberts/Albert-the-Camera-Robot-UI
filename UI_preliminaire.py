@@ -8,8 +8,9 @@ class fenetre(QMainWindow):
     def __init__(self):
         super().__init__()
 
+        # Mise en place de la fenêtre et paramètres de départ
         self.setWindowTitle("Positionnement de la grue caméra")
-        self.setGeometry(600,50,700,1050)
+        self.setGeometry(1000,100,800,1400)
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
         self.layout = QVBoxLayout(self.central_widget)
@@ -17,11 +18,13 @@ class fenetre(QMainWindow):
         self.canvas = QLabel()
         self.layout.addWidget(self.canvas)
 
-        self.angle_rotation = 90
+        self.angle_rotation = 180
         self.angle_inclinaison = -60
-        self.longueur_bras = 100
-        self.longueur_telescope = 0
+        self.longueur_bras = 50
+        self.longueur_telescope = 100
         self.allongement_telescope = 10
+        self.longueur_contrepoids = 15
+        self.allongement_contrepoids = 3
 
         self.vitesse_moteur1 = 0
         self.vitesse_moteur2 = 0
@@ -48,7 +51,7 @@ class fenetre(QMainWindow):
 
         self.boutons()
 
-        self.base_triangle = QPixmap(600, 600)
+        self.base_triangle = QPixmap(1000, 600)
         self.simulation()
 
     def activation(self):
@@ -62,12 +65,12 @@ class fenetre(QMainWindow):
 
     def rotation_pos(self):
         if self.robot_actif:
-            self.angle_rotation += 5
+            self.angle_rotation += 3
             self.simulation()
 
     def rotation_neg(self):
         if self.robot_actif:
-            self.angle_rotation -= 5
+            self.angle_rotation -= 3
             self.simulation()
 
     def boutons(self):
@@ -76,8 +79,10 @@ class fenetre(QMainWindow):
             ("Rotation négative", self.rotation_neg),
             ("Incliner vers le haut", self.incliner_haut),
             ("Incliner vers le bas", self.incliner_bas),
-            ("Télescoper +", self.telescope_pos),
-            ("Télescoper -", self.telescope_neg)
+            ("Sortir télescope", self.telescope_pos),
+            ("Rentrer télescope", self.telescope_neg),
+            ("Avancer contrepoids", self.contrepoids_pos),
+            ("Reculer contrepoids", self.contrepoids_neg),
         ]
 
         for texte, fonction in boutons:
@@ -86,12 +91,12 @@ class fenetre(QMainWindow):
 
     def incliner_haut(self):
         if self.robot_actif:
-            self.angle_inclinaison += 5
+            self.angle_inclinaison += 3
             self.simulation()
 
     def incliner_bas(self):
         if self.robot_actif:
-            self.angle_inclinaison -= 5
+            self.angle_inclinaison -= 3
             self.simulation()
 
     def telescope_pos(self):
@@ -104,33 +109,79 @@ class fenetre(QMainWindow):
             self.longueur_telescope = self.longueur_telescope - self.allongement_telescope
             self.simulation()
 
+    def contrepoids_pos(self):
+        if self.robot_actif:
+            self.longueur_contrepoids = self.longueur_contrepoids + self.allongement_contrepoids
+            self.simulation()
+
+    def contrepoids_neg(self):
+        if self.robot_actif:
+            self.longueur_contrepoids = self.longueur_contrepoids - self.allongement_contrepoids
+            self.simulation()
+
     def simulation(self):
         self.base_triangle.fill(QColor("white"))
 
         painter = QPainter(self.base_triangle)
         painter.setPen(QPen(QColor("black")))
 
-        painter.drawLine(20, 20, 20, 80)
-        painter.drawText(16, 15, "Y")
+        # Dessin du référentiel vue de côté
+        painter.drawLine(20, 30, 20, 90)
+        painter.drawText(16, 23, "Y")
 
-        painter.drawLine(20, 80, 80, 80)
-        painter.drawText(90, 80, "X")
+        painter.drawLine(20, 90, 80, 90)
+        painter.drawText(90, 93, "X")
 
-        base_coords = [QPointF(200, 330), QPointF(170, 360), QPointF(230, 360)]
+        # Dessin du référentiel vue de dessus
+        painter.drawLine(895, 80, 895, 20)
+        painter.drawText(890, 105, "Z")
+
+        painter.drawLine(895, 20, 955, 20)
+        painter.drawText(965, 29, "X")
+
+        # Dessin de la base triangulaire
+        base_coords = [QPointF(200, 400), QPointF(170, 460), QPointF(230, 460)]
         painter.setBrush(QColor("gray"))
         painter.drawPolygon(QPolygonF(base_coords))
 
-        x1 = int(200 + self.longueur_bras * math.cos(math.radians(self.angle_rotation)))
-        y1 = int(350 - self.longueur_bras * math.sin(math.radians(self.angle_rotation)))
-        x2 = int(x1 + (self.longueur_bras + self.longueur_telescope) * math.cos(math.radians(self.angle_rotation + self.angle_inclinaison)))
-        y2 = int(y1 - (self.longueur_bras + self.longueur_telescope) * math.sin(math.radians(self.angle_rotation + self.angle_inclinaison)))
+        # Calculs de l'angle des lignes dessinées
+        x1 = int(150 + self.longueur_bras)
+        y1 = int(350 - self.longueur_bras)
 
+        x2 = int(x1 + (self.longueur_bras + self.longueur_telescope) * math.cos(math.radians(90 + self.angle_inclinaison)))
+        y2 = int(y1 - (self.longueur_bras + self.longueur_telescope) * math.sin(math.radians(90 + self.angle_inclinaison)))
+
+        x3 = int(x1 - (self.longueur_contrepoids + self.longueur_contrepoids) * math.cos(math.radians(90 + self.angle_inclinaison)))
+        y3 = int(y1 + (self.longueur_contrepoids + self.longueur_contrepoids) * math.sin(math.radians(90 + self.angle_inclinaison)))
+
+        x4 = int(x1 - 75 * math.cos(math.radians(90 + self.angle_inclinaison)))
+        y4 = int(y1 + 75 * math.sin(math.radians(90 + self.angle_inclinaison)))
+
+        xd = int(750 - 100 * math.cos(math.radians(self.angle_rotation)))
+        yd = int(300 + 100 * math.sin(math.radians(self.angle_rotation)))
+
+        # Dessin des lignes
         painter.setPen(QPen(QColor("black"), 5))
-        painter.drawLine(QPointF(200, 350), QPointF(x1, y1))
+        painter.drawLine(QPointF(200, 430), QPointF(x1, y1))
         painter.drawLine(QPointF(x1, y1), QPointF(x2, y2))
+        painter.drawLine(QPointF(x1, y1), QPointF(x3, y3))
+        painter.drawLine(QPointF(x1, y1), QPointF(x4, y4))
 
+        # Dessin des éllipses
         painter.setBrush(QColor("blue"))
-        painter.drawEllipse(QPointF(x2, y2), 10, 10)
+        painter.drawEllipse(QPointF(x2, y2), 13, 13)
+        painter.setBrush(QColor("green"))
+        painter.drawEllipse(QPointF(x3, y3), 10, 10)
+
+        # Dessin de la vue de dessus
+        painter.setPen(QPen(QColor("black"), 2))
+        painter.setBrush(QColor("white"))
+        painter.drawEllipse(QPointF(750, 300), 100, 100)
+        painter.drawLine(QPointF(750, 300), QPointF(xd, yd))
+
+        # Tracé des titres dans le pixmap
+        painter.drawText(175, 150, "Vue de côté")
+        painter.drawText(685, 150, "Vue de dessus")
 
         painter.end()
 
