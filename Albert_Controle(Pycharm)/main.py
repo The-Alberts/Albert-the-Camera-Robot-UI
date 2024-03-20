@@ -3,8 +3,8 @@ import time
 # import serial.tools.list_ports
 from inputs import get_gamepad
 import math
-import threading
 import json
+import sched
 
 
 #ports = serial.tools.list_ports.comports()
@@ -116,19 +116,13 @@ class XboxController(object):
                 elif event.code == 'BTN_TRIGGER_HAPPY4':
                     self.DownDPad = event.state
 
-"""def write_read(x):
-    arduino.write(bytes(x, 'utf-8'))
-    time.sleep(0.05)
-    data = arduino.readline()
-    return data
-    """
 
 
 if __name__ == '__main__':
 
-    print("Ready...")
+    #Initialisation
 
-    ser = serial.Serial("COM3", baudrate=9600,
+    ser = serial.Serial("COM6", baudrate=9600,
                         timeout=2.5,
                         parity=serial.PARITY_NONE,
                         bytesize=serial.EIGHTBITS,
@@ -144,8 +138,8 @@ if __name__ == '__main__':
         json1 = json.dumps(joy.read())
 
         if ser.isOpen():
-            data_js = json1.encode('ascii');
-            print(data_js);
+            data_js = json1.encode('ascii')
+            print(data_js)
             ser.write(json1.encode('ascii'))
             ser.flush()
             try:
@@ -160,9 +154,3 @@ if __name__ == '__main__':
 
         #ser.close()
 
-
-        """
-        #Attempt to send through serial port
-        COM = input(joy.read())
-        serialInst.write(COM.encode('utf-8'))
-        """
