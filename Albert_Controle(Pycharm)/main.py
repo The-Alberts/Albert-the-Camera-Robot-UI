@@ -7,7 +7,7 @@ import json
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget, QFrame
 from PyQt5.QtGui import QPixmap, QPainter, QPen, QColor, QPolygonF
-from PyQt5.QtCore import QPointF
+from PyQt5.QtCore import QPointF, QTimer
 import math
 
 #ports = serial.tools.list_ports.comports()
@@ -169,6 +169,39 @@ class fenetre(QMainWindow):
 
         self.base_triangle = QPixmap(1000, 600)
         self.simulation()
+
+        self.comInit()          #Set up the Serial communication
+        self.periodicSetUp()    #will call the peiodic function at 100Hz
+
+    def comInit(self):
+        self.ser = serial.Serial("COM3", baudrate=9600,
+                            timeout=2.5,
+                            parity=serial.PARITY_NONE,
+                            bytesize=serial.EIGHTBITS,
+                            stopbits=serial.STOPBITS_ONE
+                            )
+        self.joy = XboxController()
+    def periodicSetUp(self):
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.communication)
+        self.timer.start(10)    # 10ms interval
+    def communication(self):
+        json1 = json.dumps(self.joy.read())
+
+        if self.ser.isOpen():
+            data_js = json1.encode('ascii')
+            print(data_js)
+            self.ser.write(json1.encode('ascii'))
+            self.ser.flush()
+            try:
+                incoming = self.ser.readline().decode("utf-8")
+                print("got:", incoming)
+
+            except Exception as e:
+                print(e)
+                pass
+        else:
+            print("opening error")
     def activation(self):
 
         self.robot_actif = not self.robot_actif
@@ -306,7 +339,7 @@ class fenetre(QMainWindow):
 if __name__ == '__main__':
 
     #Initialisation
-
+    """
     ser = serial.Serial("COM3", baudrate=9600,
                         timeout=2.5,
                         parity=serial.PARITY_NONE,
@@ -314,13 +347,13 @@ if __name__ == '__main__':
                         stopbits=serial.STOPBITS_ONE
                         )
     joy = XboxController()
-
+    """
     app = QApplication(sys.argv)
     window = fenetre()
-
-
+    window.show()
+    sys.exit(app.exec_())
     ###exit(0)
-
+    """
     while True:
 
         #Converting dictionary to json strings
@@ -341,11 +374,11 @@ if __name__ == '__main__':
         else:
             print("opening error")
 
+        """
 
-        window.show()
 
-        if joy.read().get('YButton'):
-            sys.exit(app.exec_())
+        #if joy.read().get('YButton'):
+
 
 
         #ser.close()
