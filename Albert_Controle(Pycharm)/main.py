@@ -51,18 +51,18 @@ class XboxController(object):
 
     def read(self): # return the buttons/triggers that you care about in this methode
         thisdict = dict(
-            #LeftJoystickX   = self.LeftJoystickX,
+            LeftJoystickX   = self.LeftJoystickX,
             #LeftJoystickY   = self.LeftJoystickY,
             #RightJoystickX  = self.RightJoystickX,
-            #RightJoystickY  = self.RightJoystickY,
-            #LeftTrigger     = self.LeftTrigger,
+            RightJoystickY  = self.RightJoystickY,
+            LeftTrigger     = self.LeftTrigger,
             RightTrigger    = self.RightTrigger,
             #LeftBumper      = self.LeftBumper,
             #RightBumper     = self.RightBumper,
-            AButton         = self.A,
-            BButton         = self.B,
-            XButton         = self.X,
-            YButton         = self.Y,
+            #AButton         = self.A,
+            #BButton         = self.B,
+            #XButton         = self.X,
+            #YButton         = self.Y,
             #LeftThumb       = self.LeftThumb,
             #RightThumb      = self.RightThumb,
             #LeftDpad        = self.LeftDPad,
@@ -70,7 +70,7 @@ class XboxController(object):
             #UpDpad          = self.UpDPad,
             #DownDpad        = self.DownDPad,
             #BackButton      = self.Back,
-            #StartButton     = self.Start,
+            StartButton     = self.Start,
         )
         return thisdict
 
@@ -118,6 +118,7 @@ class XboxController(object):
                     self.UpDPad = event.state
                 elif event.code == 'BTN_TRIGGER_HAPPY4':
                     self.DownDPad = event.state
+            time.sleep(0.01)
 
 class fenetre(QMainWindow):
 
@@ -142,21 +143,21 @@ class fenetre(QMainWindow):
         self.longueur_contrepoids = 15
         self.allongement_contrepoids = 2
 
-        self.vitesse_moteur1 = 0
-        self.vitesse_moteur2 = 0
-        self.vitesse_moteur3 = 0
-        self.vitesse_moteur4 = 0
+        self.A_button_state = 0
+        self.B_button_state = 0
+        self.X_button_state = 0
+        self.Y_button_state = 0
 
         self.robot_actif = False
 
-        self.nom_moteur1 = QLabel("Vitesse moteur 1 : " + str(self.vitesse_moteur1))
-        self.layout.addWidget(self.nom_moteur1)
-        self.nom_moteur2 = QLabel("Vitesse moteur 2 : " + str(self.vitesse_moteur2))
-        self.layout.addWidget(self.nom_moteur2)
-        self.nom_moteur3 = QLabel("Vitesse moteur 3 : " + str(self.vitesse_moteur3))
-        self.layout.addWidget(self.nom_moteur3)
-        self.nom_moteur4 = QLabel("Vitesse moteur 4 : " + str(self.vitesse_moteur4))
-        self.layout.addWidget(self.nom_moteur4)
+        self.A_button = QLabel("A button state : " + str(self.A_button_state))
+        self.layout.addWidget(self.A_button)
+        self.B_button = QLabel("B button state : " + str(self.B_button_state))
+        self.layout.addWidget(self.B_button)
+        self.X_button = QLabel("X button state : " + str(self.X_button_state))
+        self.layout.addWidget(self.X_button)
+        self.Y_button = QLabel("Y button state : " + str(self.Y_button_state))
+        self.layout.addWidget(self.Y_button)
 
         self.bouton_activer = QPushButton("Désactivé", clicked=self.activation)
         self.layout.addWidget(self.bouton_activer)
@@ -173,6 +174,7 @@ class fenetre(QMainWindow):
         self.comInit()          #Set up the Serial communication
         self.periodicSetUp()    #will call the peiodic function at 100Hz
 
+        self.update_button()
     def comInit(self):
         self.ser = serial.Serial("COM3", baudrate=9600,
                             timeout=2.5,
@@ -184,7 +186,8 @@ class fenetre(QMainWindow):
     def periodicSetUp(self):
         self.timer = QTimer()
         self.timer.timeout.connect(self.communication)
-        self.timer.start(10)    # 10ms interval
+        self.timer.timeout.connect(self.update_button)
+        self.timer.start(50)    # 50ms interval
     def communication(self):
         json1 = json.dumps(self.joy.read())
 
@@ -194,16 +197,22 @@ class fenetre(QMainWindow):
             self.ser.write(json1.encode('ascii'))
             self.ser.flush()
             try:
-                incoming = self.ser.readline().decode("utf-8")
-                print("got:", incoming)
+                self.incoming = self.ser.readline().decode("utf-8")
+                print("got:", self.incoming)
 
             except Exception as e:
                 print(e)
                 pass
         else:
             print("opening error")
-    def activation(self):
 
+    def update_button(self):
+        if self.joy.read().get('LefTrigger'):
+            self.telescope_neg()
+        if self.joy.read().get('RightTrigger'):
+            self.telescope_pos()
+
+    def activation(self):
         self.robot_actif = not self.robot_actif
         if self.robot_actif:
             self.bouton_activer.setText("Activé")
@@ -238,6 +247,7 @@ class fenetre(QMainWindow):
         for texte, fonction in boutons:
             bouton = QPushButton(texte, clicked=fonction)
             self.layout_controle.addWidget(bouton)
+
     def incliner_haut(self):
         if self.robot_actif:
             self.angle_inclinaison += 3
