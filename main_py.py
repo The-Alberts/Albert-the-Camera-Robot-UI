@@ -1,6 +1,5 @@
 import serial
 import time
-# import serial.tools.list_ports
 from inputs import get_gamepad
 import threading
 import json
@@ -10,12 +9,7 @@ from PyQt5.QtGui import QPixmap, QPainter, QPen, QColor, QPolygonF
 from PyQt5.QtCore import QPointF, QTimer
 import math
 
-#ports = serial.tools.list_ports.comports()
-#arduino = serial.Serial(port='COM3', baudrate=115200, timeout=.1)
-#serialInst = serial.Serial()
-
 portsList = []
-
 
 class XboxController(object):
     MAX_TRIG_VAL = math.pow(2, 8)
@@ -69,8 +63,8 @@ class XboxController(object):
             #RightDpad       = self.RightDPad,
             #UpDpad          = self.UpDPad,
             #DownDpad        = self.DownDPad,
-            #BackButton      = self.Back,
-            StartButton     = self.Start,
+            BackButton      = self.Back,
+            #Backbutton     = self.Start,
         )
         return thisdict
 
@@ -118,15 +112,15 @@ class XboxController(object):
                     self.UpDPad = event.state
                 elif event.code == 'BTN_TRIGGER_HAPPY4':
                     self.DownDPad = event.state
-            time.sleep(0.01)
+            time.sleep(0.05)
 
 class Mainwindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
 
-        # Mise en place de la fenêtre et paramètres de départ
-        self.setWindowTitle("Positionnement de la grue caméra")
+        # Set up the initial parameters of the window
+        self.setWindowTitle("Positioning the camera crane")
         self.setGeometry(1000, 100, 800, 1400)
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
@@ -140,24 +134,19 @@ class Mainwindow(QMainWindow):
         self.arm_length = 50
         self.telescope_length = 100
         self.telescope_elongation = 5
-        self.counterweight_length = 15
-        self.counterweight_elongation = 2
 
-        self.A_button_state = 0
-        self.B_button_state = 0
-        self.X_button_state = 0
-        self.Y_button_state = 0
+        self.base_motor_speed = 0
+        self.tilt_motor_speed = 0
+        self.telescope_motor_speed = 0
 
         self.active_robot = False
 
-        self.A_button = QLabel("A button state : " + str(self.A_button_state))
-        self.layout.addWidget(self.A_button)
-        self.B_button = QLabel("B button state : " + str(self.B_button_state))
-        self.layout.addWidget(self.B_button)
-        self.X_button = QLabel("X button state : " + str(self.X_button_state))
-        self.layout.addWidget(self.X_button)
-        self.Y_button = QLabel("Y button state : " + str(self.Y_button_state))
-        self.layout.addWidget(self.Y_button)
+        self.base_motor = QLabel("A button state : " + str(self.base_motor_speed))
+        self.layout.addWidget(self.base_motor)
+        self.tilt_motor = QLabel("B button state : " + str(self.tilt_motor_speed))
+        self.layout.addWidget(self.tilt_motor)
+        self.telescope_motor = QLabel("X button state : " + str(self.telescope_motor_speed))
+        self.layout.addWidget(self.telescope_motor)
 
         self.activation_button = QPushButton("Desactivated", clicked=self.activation)
         self.layout.addWidget(self.activation_button)
@@ -175,6 +164,7 @@ class Mainwindow(QMainWindow):
         self.periodicSetUp()    #will call the peiodic function at 100Hz
 
         self.update_button()
+
     def comInit(self):
         self.ser = serial.Serial("COM8", baudrate=9600,
                             timeout=2.5,
@@ -183,11 +173,13 @@ class Mainwindow(QMainWindow):
                             stopbits=serial.STOPBITS_ONE
                             )
         self.joy = XboxController()
+
     def periodicSetUp(self):
         self.timer = QTimer()
         self.timer.timeout.connect(self.communication)
         self.timer.timeout.connect(self.update_button)
         self.timer.start(50)    # 50ms interval
+
     def communication(self):
         json1 = json.dumps(self.joy.read())
 
@@ -206,24 +198,31 @@ class Mainwindow(QMainWindow):
         else:
             print("opening error")
 
+    # Update the buttons state with the controller and execute a function
     def update_button(self):
+        # LeftTrigger retract the telescope and the RightTrigger extend it
         if self.joy.read().get('LeftTrigger') is not None and self.joy.read().get('RightTrigger') is not None:
             if self.joy.read().get('LeftTrigger') > 0.05:
                 self.retract_telescope()
             elif self.joy.read().get('RightTrigger') > 0.05:
                 self.extend_telescope()
-        if self.joy.read().get('StartButton') == 1:
+        # BackButton activated and desactivated the robot
+        if self.joy.read().get('Backbutton') == 1:
             self.activation()
+        # LeftJoyStickX rotates the base in the positive direction when in the left position
+        # and in negative direction when in the the right position
         if self.joy.read().get('LeftJoystickX') < -0.05:
-            self.negative_rotation()
-        if self.joy.read().get('LeftJoystickX') > 0.05:
             self.positive_rotation()
+        if self.joy.read().get('LeftJoystickX') > 0.05:
+            self.negative_rotation()
+        # RightJoyStickY tilt up the arm when in the up position
+        # and tilt down the arm when in the down position
         if self.joy.read().get('RightJoystickY') > 0.05:
             self.tilt_up()
         if self.joy.read().get('RightJoystickY') < -0.05:
             self.tilt_down()
 
-
+    # General activation of the robot
     def activation(self):
         self.active_robot = not self.active_robot
         if self.active_robot:
@@ -232,6 +231,8 @@ class Mainwindow(QMainWindow):
         else:
             self.activation_button.setText("Desactivated")
             self.activation_button.setStyleSheet("background-color: red; color: white;")
+
+    # Base rotation
     def positive_rotation(self):
         if self.active_robot:
             self.rotation_angle += 3
@@ -241,8 +242,7 @@ class Mainwindow(QMainWindow):
             self.rotation_angle -= 3
             self.simulation()
 
-    #def fermeture(self):
-    #    sys.exit(app.exec_())
+    # Definition of the UI's buttons
     def buttons(self):
         buttons = [
             ("Positive rotation", self.positive_rotation),
@@ -260,6 +260,7 @@ class Mainwindow(QMainWindow):
             bouton = QPushButton(texte, clicked=fonction)
             self.layout_controle.addWidget(bouton)
 
+    # Tilt of the arm
     def tilt_up(self):
         if self.active_robot:
             self.tilt_angle += 3
@@ -268,6 +269,8 @@ class Mainwindow(QMainWindow):
         if self.active_robot:
             self.tilt_angle -= 3
             self.simulation()
+
+    # Extension of the telescope
     def extend_telescope(self):
         if self.active_robot:
             self.telescope_length = self.telescope_length + self.telescope_elongation
@@ -276,40 +279,34 @@ class Mainwindow(QMainWindow):
         if self.active_robot:
             self.telescope_length = self.telescope_length - self.telescope_elongation
             self.simulation()
-    def contrepoids_pos(self):
-        if self.active_robot:
-            self.counterweight_length = self.counterweight_length + self.counterweight_elongation
-            self.simulation()
-    def contrepoids_neg(self):
-        if self.active_robot:
-            self.counterweight_length = self.counterweight_length - self.counterweight_elongation
-            self.simulation()
+
+    # Drawing and controle of the simulation in the UI
     def simulation(self):
         self.base_triangle.fill(QColor("white"))
 
         painter = QPainter(self.base_triangle)
         painter.setPen(QPen(QColor("black")))
 
-        # Dessin du référentiel vue de côté
+        # Drawing side view frame
         painter.drawLine(20, 30, 20, 90)
         painter.drawText(16, 23, "Y")
 
         painter.drawLine(20, 90, 80, 90)
         painter.drawText(90, 93, "X")
 
-        # Dessin du référentiel vue de dessus
+        # Drawing upperview frame
         painter.drawLine(895, 80, 895, 20)
         painter.drawText(890, 105, "Z")
 
         painter.drawLine(895, 20, 955, 20)
         painter.drawText(965, 29, "X")
 
-        # Dessin de la base triangulaire
+        # Drawing the triangular base
         base_coords = [QPointF(200, 400), QPointF(170, 460), QPointF(230, 460)]
         painter.setBrush(QColor("gray"))
         painter.drawPolygon(QPolygonF(base_coords))
 
-        # Calculs de l'angle des lignes dessinées
+        # Calculation of the angle of drawn lines
         x1 = int(150 + self.arm_length)
         y1 = int(350 - self.arm_length)
 
@@ -318,37 +315,30 @@ class Mainwindow(QMainWindow):
         y2 = int(
             y1 - (self.arm_length + self.telescope_length) * math.sin(math.radians(90 + self.tilt_angle)))
 
-        x3 = int(x1 - (self.counterweight_length + self.counterweight_length) * math.cos(
-            math.radians(90 + self.tilt_angle)))
-        y3 = int(y1 + (self.counterweight_length + self.counterweight_length) * math.sin(
-            math.radians(90 + self.tilt_angle)))
-
         x4 = int(x1 - 75 * math.cos(math.radians(90 + self.tilt_angle)))
         y4 = int(y1 + 75 * math.sin(math.radians(90 + self.tilt_angle)))
 
         xd = int(750 - 100 * math.cos(math.radians(self.rotation_angle)))
         yd = int(300 + 100 * math.sin(math.radians(self.rotation_angle)))
 
-        # Dessin des lignes
+        # Drawing lines
         painter.setPen(QPen(QColor("black"), 5))
         painter.drawLine(QPointF(200, 430), QPointF(x1, y1))
         painter.drawLine(QPointF(x1, y1), QPointF(x2, y2))
         painter.drawLine(QPointF(x1, y1), QPointF(x3, y3))
         painter.drawLine(QPointF(x1, y1), QPointF(x4, y4))
 
-        # Dessin des éllipses
+        # Drawing ellipses
         painter.setBrush(QColor("blue"))
         painter.drawEllipse(QPointF(x2, y2), 13, 13)
-        #painter.setBrush(QColor("green"))
-        #painter.drawEllipse(QPointF(x3, y3), 10, 10)
 
-        # Dessin de la vue de dessus
+        # Drawing the upper view
         painter.setPen(QPen(QColor("black"), 2))
         painter.setBrush(QColor("white"))
         painter.drawEllipse(QPointF(750, 300), 100, 100)
         painter.drawLine(QPointF(750, 300), QPointF(xd, yd))
 
-        # Tracé des titres dans le pixmap
+        # WRiting title int the pixmap
         painter.drawText(175, 150, "Vue de côté")
         painter.drawText(685, 150, "Vue de dessus")
 
@@ -360,47 +350,7 @@ class Mainwindow(QMainWindow):
 
 if __name__ == '__main__':
 
-    #Initialisation
-    """
-    ser = serial.Serial("COM3", baudrate=9600,
-                        timeout=2.5,
-                        parity=serial.PARITY_NONE,
-                        bytesize=serial.EIGHTBITS,
-                        stopbits=serial.STOPBITS_ONE
-                        )
-    joy = XboxController()
-    """
     app = QApplication(sys.argv)
     window = Mainwindow()
     window.show()
     sys.exit(app.exec_())
-    ###exit(0)
-    """
-    while True:
-
-        #Converting dictionary to json strings
-        json1 = json.dumps(joy.read())
-
-        if ser.isOpen():
-            data_js = json1.encode('ascii')
-            print(data_js)
-            ser.write(json1.encode('ascii'))
-            ser.flush()
-            try:
-                incoming = ser.readline().decode("utf-8")
-                print("got:", incoming)
-
-            except Exception as e:
-                print(e)
-                pass
-        else:
-            print("opening error")
-
-        """
-
-
-        #if joy.read().get('YButton'):
-
-
-
-        #ser.close()
