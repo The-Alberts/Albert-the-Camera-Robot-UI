@@ -176,7 +176,7 @@ class Mainwindow(QMainWindow):
 
         self.update_button()
     def comInit(self):
-        self.ser = serial.Serial("COM5", baudrate=9600,
+        self.ser = serial.Serial("COM8", baudrate=9600,
                             timeout=2.5,
                             parity=serial.PARITY_NONE,
                             bytesize=serial.EIGHTBITS,
@@ -207,10 +207,22 @@ class Mainwindow(QMainWindow):
             print("opening error")
 
     def update_button(self):
-        if self.joy.read().get('LefTrigger'):
-            self.retract_telescope()
-        if self.joy.read().get('RightTrigger'):
-            self.extend_telescope()
+        if self.joy.read().get('LeftTrigger') is not None and self.joy.read().get('RightTrigger') is not None:
+            if self.joy.read().get('LeftTrigger') > 0.05:
+                self.retract_telescope()
+            elif self.joy.read().get('RightTrigger') > 0.05:
+                self.extend_telescope()
+        if self.joy.read().get('StartButton') == 1:
+            self.activation()
+        if self.joy.read().get('LeftJoystickX') < -0.05:
+            self.negative_rotation()
+        if self.joy.read().get('LeftJoystickX') > 0.05:
+            self.positive_rotation()
+        if self.joy.read().get('RightJoystickY') > 0.05:
+            self.tilt_up()
+        if self.joy.read().get('RightJoystickY') < -0.05:
+            self.tilt_down()
+
 
     def activation(self):
         self.active_robot = not self.active_robot
