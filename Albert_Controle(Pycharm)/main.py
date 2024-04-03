@@ -118,9 +118,9 @@ class XboxController(object):
                     self.UpDPad = event.state
                 elif event.code == 'BTN_TRIGGER_HAPPY4':
                     self.DownDPad = event.state
-            time.sleep(0.01)
+            time.sleep(0.05)
 
-class fenetre(QMainWindow):
+class Mainwindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
@@ -135,20 +135,20 @@ class fenetre(QMainWindow):
         self.canvas = QLabel()
         self.layout.addWidget(self.canvas)
 
-        self.angle_rotation = 180
-        self.angle_inclinaison = -60
-        self.longueur_bras = 50
-        self.longueur_telescope = 100
-        self.allongement_telescope = 10
-        self.longueur_contrepoids = 15
-        self.allongement_contrepoids = 2
+        self.rotation_angle = 180
+        self.tilt_angle = -60
+        self.arm_length = 50
+        self.telescope_length = 100
+        self.telescope_elongation = 5
+        self.counterweight_length = 15
+        self.counterweight_elongation = 2
 
         self.A_button_state = 0
         self.B_button_state = 0
         self.X_button_state = 0
         self.Y_button_state = 0
 
-        self.robot_actif = False
+        self.active_robot = False
 
         self.A_button = QLabel("A button state : " + str(self.A_button_state))
         self.layout.addWidget(self.A_button)
@@ -159,14 +159,14 @@ class fenetre(QMainWindow):
         self.Y_button = QLabel("Y button state : " + str(self.Y_button_state))
         self.layout.addWidget(self.Y_button)
 
-        self.bouton_activer = QPushButton("Désactivé", clicked=self.activation)
-        self.layout.addWidget(self.bouton_activer)
+        self.activation_button = QPushButton("Desactivated", clicked=self.activation)
+        self.layout.addWidget(self.activation_button)
 
-        self.cadre_controle = QFrame()
-        self.layout.addWidget(self.cadre_controle)
-        self.layout_controle = QVBoxLayout(self.cadre_controle)
+        self.frame = QFrame()
+        self.layout.addWidget(self.frame)
+        self.layout_controle = QVBoxLayout(self.frame)
 
-        self.boutons()
+        self.buttons()
 
         self.base_triangle = QPixmap(1000, 600)
         self.simulation()
@@ -207,70 +207,82 @@ class fenetre(QMainWindow):
             print("opening error")
 
     def update_button(self):
-        if self.joy.read().get('LefTrigger'):
-            self.telescope_neg()
-        if self.joy.read().get('RightTrigger'):
-            self.telescope_pos()
+        if self.joy.read().get('LeftTrigger') is not None and self.joy.read().get('RightTrigger') is not None:
+            if self.joy.read().get('LeftTrigger') > 0.05:
+                self.retract_telescope()
+            elif self.joy.read().get('RightTrigger') > 0.05:
+                self.extend_telescope()
+        if self.joy.read().get('StartButton') == 1:
+            self.activation()
+        if self.joy.read().get('LeftJoystickX') < -0.05:
+            self.negative_rotation()
+        if self.joy.read().get('LeftJoystickX') > 0.05:
+            self.positive_rotation()
+        if self.joy.read().get('RightJoystickY') > 0.05:
+            self.tilt_up()
+        if self.joy.read().get('RightJoystickY') < -0.05:
+            self.tilt_down()
+
 
     def activation(self):
-        self.robot_actif = not self.robot_actif
-        if self.robot_actif:
-            self.bouton_activer.setText("Activé")
-            self.bouton_activer.setStyleSheet("background-color: green; color: white;")
+        self.active_robot = not self.active_robot
+        if self.active_robot:
+            self.activation_button.setText("Activated")
+            self.activation_button.setStyleSheet("background-color: green; color: white;")
         else:
-            self.bouton_activer.setText("Désactivé")
-            self.bouton_activer.setStyleSheet("background-color: red; color: white;")
-    def rotation_pos(self):
-        if self.robot_actif:
-            self.angle_rotation += 3
+            self.activation_button.setText("Desactivated")
+            self.activation_button.setStyleSheet("background-color: red; color: white;")
+    def positive_rotation(self):
+        if self.active_robot:
+            self.rotation_angle += 3
             self.simulation()
-    def rotation_neg(self):
-        if self.robot_actif:
-            self.angle_rotation -= 3
+    def negative_rotation(self):
+        if self.active_robot:
+            self.rotation_angle -= 3
             self.simulation()
 
     #def fermeture(self):
     #    sys.exit(app.exec_())
-    def boutons(self):
-        boutons = [
-            ("Rotation positive", self.rotation_pos),
-            ("Rotation négative", self.rotation_neg),
-            ("Incliner vers le haut", self.incliner_haut),
-            ("Incliner vers le bas", self.incliner_bas),
-            ("Sortir télescope", self.telescope_pos),
-            ("Rentrer télescope", self.telescope_neg),
-            ("Avancer contrepoids", self.contrepoids_pos),
-            ("Reculer contrepoids", self.contrepoids_neg),
+    def buttons(self):
+        buttons = [
+            ("Positive rotation", self.positive_rotation),
+            ("Negative rotation", self.negative_rotation),
+            ("Tilt up", self.tilt_up),
+            ("Tilt down", self.tilt_down),
+            ("Retract telescope", self.extend_telescope),
+            ("Take out telescope", self.retract_telescope),
+            #("Avancer contrepoids", self.contrepoids_pos),
+            #("Reculer contrepoids", self.contrepoids_neg),
             #("Fermeture", self.fermeture)
         ]
 
-        for texte, fonction in boutons:
+        for texte, fonction in buttons:
             bouton = QPushButton(texte, clicked=fonction)
             self.layout_controle.addWidget(bouton)
 
-    def incliner_haut(self):
-        if self.robot_actif:
-            self.angle_inclinaison += 3
+    def tilt_up(self):
+        if self.active_robot:
+            self.tilt_angle += 3
             self.simulation()
-    def incliner_bas(self):
-        if self.robot_actif:
-            self.angle_inclinaison -= 3
+    def tilt_down(self):
+        if self.active_robot:
+            self.tilt_angle -= 3
             self.simulation()
-    def telescope_pos(self):
-        if self.robot_actif:
-            self.longueur_telescope = self.longueur_telescope + self.allongement_telescope
+    def extend_telescope(self):
+        if self.active_robot:
+            self.telescope_length = self.telescope_length + self.telescope_elongation
             self.simulation()
-    def telescope_neg(self):
-        if self.robot_actif:
-            self.longueur_telescope = self.longueur_telescope - self.allongement_telescope
+    def retract_telescope(self):
+        if self.active_robot:
+            self.telescope_length = self.telescope_length - self.telescope_elongation
             self.simulation()
     def contrepoids_pos(self):
-        if self.robot_actif:
-            self.longueur_contrepoids = self.longueur_contrepoids + self.allongement_contrepoids
+        if self.active_robot:
+            self.counterweight_length = self.counterweight_length + self.counterweight_elongation
             self.simulation()
     def contrepoids_neg(self):
-        if self.robot_actif:
-            self.longueur_contrepoids = self.longueur_contrepoids - self.allongement_contrepoids
+        if self.active_robot:
+            self.counterweight_length = self.counterweight_length - self.counterweight_elongation
             self.simulation()
     def simulation(self):
         self.base_triangle.fill(QColor("white"))
@@ -298,24 +310,24 @@ class fenetre(QMainWindow):
         painter.drawPolygon(QPolygonF(base_coords))
 
         # Calculs de l'angle des lignes dessinées
-        x1 = int(150 + self.longueur_bras)
-        y1 = int(350 - self.longueur_bras)
+        x1 = int(150 + self.arm_length)
+        y1 = int(350 - self.arm_length)
 
         x2 = int(
-            x1 + (self.longueur_bras + self.longueur_telescope) * math.cos(math.radians(90 + self.angle_inclinaison)))
+            x1 + (self.arm_length + self.telescope_length) * math.cos(math.radians(90 + self.tilt_angle)))
         y2 = int(
-            y1 - (self.longueur_bras + self.longueur_telescope) * math.sin(math.radians(90 + self.angle_inclinaison)))
+            y1 - (self.arm_length + self.telescope_length) * math.sin(math.radians(90 + self.tilt_angle)))
 
-        x3 = int(x1 - (self.longueur_contrepoids + self.longueur_contrepoids) * math.cos(
-            math.radians(90 + self.angle_inclinaison)))
-        y3 = int(y1 + (self.longueur_contrepoids + self.longueur_contrepoids) * math.sin(
-            math.radians(90 + self.angle_inclinaison)))
+        x3 = int(x1 - (self.counterweight_length + self.counterweight_length) * math.cos(
+            math.radians(90 + self.tilt_angle)))
+        y3 = int(y1 + (self.counterweight_length + self.counterweight_length) * math.sin(
+            math.radians(90 + self.tilt_angle)))
 
-        x4 = int(x1 - 75 * math.cos(math.radians(90 + self.angle_inclinaison)))
-        y4 = int(y1 + 75 * math.sin(math.radians(90 + self.angle_inclinaison)))
+        x4 = int(x1 - 75 * math.cos(math.radians(90 + self.tilt_angle)))
+        y4 = int(y1 + 75 * math.sin(math.radians(90 + self.tilt_angle)))
 
-        xd = int(750 - 100 * math.cos(math.radians(self.angle_rotation)))
-        yd = int(300 + 100 * math.sin(math.radians(self.angle_rotation)))
+        xd = int(750 - 100 * math.cos(math.radians(self.rotation_angle)))
+        yd = int(300 + 100 * math.sin(math.radians(self.rotation_angle)))
 
         # Dessin des lignes
         painter.setPen(QPen(QColor("black"), 5))
@@ -327,8 +339,8 @@ class fenetre(QMainWindow):
         # Dessin des éllipses
         painter.setBrush(QColor("blue"))
         painter.drawEllipse(QPointF(x2, y2), 13, 13)
-        painter.setBrush(QColor("green"))
-        painter.drawEllipse(QPointF(x3, y3), 10, 10)
+        #painter.setBrush(QColor("green"))
+        #painter.drawEllipse(QPointF(x3, y3), 10, 10)
 
         # Dessin de la vue de dessus
         painter.setPen(QPen(QColor("black"), 2))
@@ -359,7 +371,7 @@ if __name__ == '__main__':
     joy = XboxController()
     """
     app = QApplication(sys.argv)
-    window = fenetre()
+    window = Mainwindow()
     window.show()
     sys.exit(app.exec_())
     ###exit(0)
@@ -392,4 +404,3 @@ if __name__ == '__main__':
 
 
         #ser.close()
-
