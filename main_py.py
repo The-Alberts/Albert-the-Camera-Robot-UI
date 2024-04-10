@@ -63,8 +63,8 @@ class XboxController(object):
             #RightDpad       = self.RightDPad,
             #UpDpad          = self.UpDPad,
             #DownDpad        = self.DownDPad,
-            BackButton      = self.Back,
-            #Backbutton     = self.Start,
+            BackButton       = self.Back,
+            #BackStart       = self.Start,
         )
         return thisdict
 
@@ -112,7 +112,7 @@ class XboxController(object):
                     self.UpDPad = event.state
                 elif event.code == 'BTN_TRIGGER_HAPPY4':
                     self.DownDPad = event.state
-            time.sleep(0.05)
+            time.sleep(0.01)
 
 class Mainwindow(QMainWindow):
 
@@ -141,11 +141,11 @@ class Mainwindow(QMainWindow):
 
         self.active_robot = False
 
-        self.base_motor = QLabel("A button state : " + str(self.base_motor_speed))
+        self.base_motor = QLabel("Base motor speed : " + str(self.base_motor_speed))
         self.layout.addWidget(self.base_motor)
-        self.tilt_motor = QLabel("B button state : " + str(self.tilt_motor_speed))
+        self.tilt_motor = QLabel("Tilt motor spedd : " + str(self.tilt_motor_speed))
         self.layout.addWidget(self.tilt_motor)
-        self.telescope_motor = QLabel("X button state : " + str(self.telescope_motor_speed))
+        self.telescope_motor = QLabel("Telescope motor speed : " + str(self.telescope_motor_speed))
         self.layout.addWidget(self.telescope_motor)
 
         self.activation_button = QPushButton("Desactivated", clicked=self.activation)
@@ -166,7 +166,7 @@ class Mainwindow(QMainWindow):
         self.update_button()
 
     def comInit(self):
-        self.ser = serial.Serial("COM8", baudrate=9600,
+        self.ser = serial.Serial("COM9", baudrate=9600,
                             timeout=2.5,
                             parity=serial.PARITY_NONE,
                             bytesize=serial.EIGHTBITS,
@@ -181,7 +181,11 @@ class Mainwindow(QMainWindow):
         self.timer.start(50)    # 50ms interval
 
     def communication(self):
-        json1 = json.dumps(self.joy.read())
+        # Activation button state
+        dict = self.joy.read()
+        dict.update({'BackButtonAct':self.active_robot})
+
+        json1 = json.dumps(dict)
 
         if self.ser.isOpen():
             data_js = json1.encode('ascii')
@@ -207,19 +211,19 @@ class Mainwindow(QMainWindow):
             elif self.joy.read().get('RightTrigger') > 0.05:
                 self.extend_telescope()
         # BackButton activated and desactivated the robot
-        if self.joy.read().get('Backbutton') == 1:
+        if self.joy.read().get('BackButton') == True:
             self.activation()
         # LeftJoyStickX rotates the base in the positive direction when in the left position
         # and in negative direction when in the the right position
-        if self.joy.read().get('LeftJoystickX') < -0.05:
+        if self.joy.read().get('LeftJoystickX') < -0.1:
             self.positive_rotation()
-        if self.joy.read().get('LeftJoystickX') > 0.05:
+        if self.joy.read().get('LeftJoystickX') > 0.1:
             self.negative_rotation()
         # RightJoyStickY tilt up the arm when in the up position
         # and tilt down the arm when in the down position
-        if self.joy.read().get('RightJoystickY') > 0.05:
+        if self.joy.read().get('RightJoystickY') > 0.1:
             self.tilt_up()
-        if self.joy.read().get('RightJoystickY') < -0.05:
+        if self.joy.read().get('RightJoystickY') < -0.1:
             self.tilt_down()
 
     # General activation of the robot
@@ -235,11 +239,11 @@ class Mainwindow(QMainWindow):
     # Base rotation
     def positive_rotation(self):
         if self.active_robot:
-            self.rotation_angle += 3
+            self.rotation_angle += 15
             self.simulation()
     def negative_rotation(self):
         if self.active_robot:
-            self.rotation_angle -= 3
+            self.rotation_angle -= 15
             self.simulation()
 
     # Definition of the UI's buttons
@@ -325,7 +329,7 @@ class Mainwindow(QMainWindow):
         painter.setPen(QPen(QColor("black"), 5))
         painter.drawLine(QPointF(200, 430), QPointF(x1, y1))
         painter.drawLine(QPointF(x1, y1), QPointF(x2, y2))
-        painter.drawLine(QPointF(x1, y1), QPointF(x3, y3))
+        #painter.drawLine(QPointF(x1, y1), QPointF(x3, y3))
         painter.drawLine(QPointF(x1, y1), QPointF(x4, y4))
 
         # Drawing ellipses
@@ -338,7 +342,7 @@ class Mainwindow(QMainWindow):
         painter.drawEllipse(QPointF(750, 300), 100, 100)
         painter.drawLine(QPointF(750, 300), QPointF(xd, yd))
 
-        # WRiting title int the pixmap
+        # Writing title int the pixmap
         painter.drawText(175, 150, "Vue de côté")
         painter.drawText(685, 150, "Vue de dessus")
 
