@@ -132,21 +132,21 @@ class Mainwindow(QMainWindow):
         self.rotation_angle = 180
         self.tilt_angle = -60
         self.arm_length = 50
-        self.telescope_length = 100
-        self.telescope_elongation = 5
+        self.telescope_length = 120
+        self.telescope_elongation = 2
 
-        self.base_motor_speed = 0
-        self.tilt_motor_speed = 0
-        self.telescope_motor_speed = 0
+        self.base_motor_position = 0
+        self.tilt_motor_position = 0
+        self.telescope_motor_position = 0
 
         self.active_robot = False
         self.last_activation_state = False
 
-        self.base_motor = QLabel("Base motor speed : " + str(self.base_motor_speed))
+        self.base_motor = QLabel("Base motor position : " + str(self.base_motor_position))
         self.layout.addWidget(self.base_motor)
-        self.tilt_motor = QLabel("Tilt motor spedd : " + str(self.tilt_motor_speed))
+        self.tilt_motor = QLabel("Tilt motor position : " + str(self.tilt_motor_position))
         self.layout.addWidget(self.tilt_motor)
-        self.telescope_motor = QLabel("Telescope motor speed : " + str(self.telescope_motor_speed))
+        self.telescope_motor = QLabel("Telescope motor position : " + str(self.telescope_motor_position))
         self.layout.addWidget(self.telescope_motor)
 
         self.activation_button = QPushButton("Desactivated", clicked=self.activation)
