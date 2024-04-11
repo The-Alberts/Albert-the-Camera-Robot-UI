@@ -140,6 +140,7 @@ class Mainwindow(QMainWindow):
         self.telescope_motor_speed = 0
 
         self.active_robot = False
+        self.last_activation_state = False
 
         self.base_motor = QLabel("Base motor speed : " + str(self.base_motor_speed))
         self.layout.addWidget(self.base_motor)
@@ -166,7 +167,7 @@ class Mainwindow(QMainWindow):
         self.update_button()
 
     def comInit(self):
-        self.ser = serial.Serial("COM9", baudrate=9600,
+        self.ser = serial.Serial("COM8", baudrate=115200,
                             timeout=2.5,
                             parity=serial.PARITY_NONE,
                             bytesize=serial.EIGHTBITS,
@@ -202,17 +203,22 @@ class Mainwindow(QMainWindow):
         else:
             print("opening error")
 
-    # Update the buttons state with the controller and execute a function
+    # Update the buttons state w
+    # ith the controller and execute a function
     def update_button(self):
         # LeftTrigger retract the telescope and the RightTrigger extend it
         if self.joy.read().get('LeftTrigger') is not None and self.joy.read().get('RightTrigger') is not None:
-            if self.joy.read().get('LeftTrigger') > 0.05:
+            if self.joy.read().get('LeftTrigger') > 0.1:
                 self.retract_telescope()
-            elif self.joy.read().get('RightTrigger') > 0.05:
+            elif self.joy.read().get('RightTrigger') > 0.1:
                 self.extend_telescope()
         # BackButton activated and desactivated the robot
-        if self.joy.read().get('BackButton') == True:
-            self.activation()
+        if self.joy.read().get('BackButton') != self.last_activation_state:
+            if self.joy.read().get('BackButton') == True:
+                self.last_activation_state = self.joy.read().get('BackButton')
+                self.activation()
+            else:
+                self.last_activation_state = self.joy.read().get('BackButton')
         # LeftJoyStickX rotates the base in the positive direction when in the left position
         # and in negative direction when in the the right position
         if self.joy.read().get('LeftJoystickX') < -0.1:
@@ -239,11 +245,11 @@ class Mainwindow(QMainWindow):
     # Base rotation
     def positive_rotation(self):
         if self.active_robot:
-            self.rotation_angle += 15
+            self.rotation_angle += 10
             self.simulation()
     def negative_rotation(self):
         if self.active_robot:
-            self.rotation_angle -= 15
+            self.rotation_angle -= 10
             self.simulation()
 
     # Definition of the UI's buttons
